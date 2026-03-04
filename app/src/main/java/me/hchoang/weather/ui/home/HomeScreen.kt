@@ -98,101 +98,101 @@ fun HomeScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // Slide-animated weather content keyed on the loaded data
-            AnimatedContent(
-                targetState = uiState.currentWeather to uiState.forecast,
-                transitionSpec = {
-                    (slideInHorizontally(tween(350)) { slideDirection * it } + fadeIn(tween(350)))
-                        .togetherWith(
-                            slideOutHorizontally(tween(280)) { -slideDirection * it } + fadeOut(tween(200))
-                        )
-                },
-                label = "weatherSlide",
-                modifier = Modifier.fillMaxSize()
-            ) { (currentWeather, forecast) ->
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(bottom = 24.dp)
-                ) {
-                    // City quick-select chips
-                    item {
-                        CityChipsRow(
-                            cities = viewModel.popularCities,
-                            selectedCity = uiState.selectedCity,
-                            onCityClick = { city ->
-                                val currentIdx = viewModel.popularCities.indexOfFirst {
-                                    it.geohash == uiState.selectedCity?.geohash
-                                }
-                                val newIdx = viewModel.popularCities.indexOfFirst {
-                                    it.geohash == city.geohash
-                                }
-                                if (newIdx != currentIdx) {
-                                    slideDirection = if (newIdx > currentIdx) 1 else -1
-                                }
-                                viewModel.onCitySelected(city)
-                                onCitySelected(city)
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(bottom = 24.dp)
+            ) {
+                // City quick-select chips
+                item {
+                    CityChipsRow(
+                        cities = viewModel.popularCities,
+                        selectedCity = uiState.selectedCity,
+                        onCityClick = { city ->
+                            val currentIdx = viewModel.popularCities.indexOfFirst {
+                                it.geohash == uiState.selectedCity?.geohash
                             }
-                        )
-                    }
-
-                    // Current conditions hero card
-                    currentWeather?.let { weather ->
-                        item {
-                            CurrentWeatherHero(
-                                weather = weather,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 8.dp)
-                            )
+                            val newIdx = viewModel.popularCities.indexOfFirst {
+                                it.geohash == city.geohash
+                            }
+                            if (newIdx != currentIdx) {
+                                slideDirection = if (newIdx > currentIdx) 1 else -1
+                            }
+                            viewModel.onCitySelected(city)
+                            onCitySelected(city)
                         }
+                    )
+                }
 
-                        // Current detail stats
-                        item {
-                            WeatherDetailsGrid(
-                                weather = weather,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 4.dp)
-                            )
-                        }
-                    }
-
-                    // 7-day forecast
-                    if (forecast.isNotEmpty()) {
-                        item {
-                            Text(
-                                text = "7-Day Forecast",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(
-                                    start = 16.dp, end = 16.dp,
-                                    top = 16.dp, bottom = 4.dp
-                                )
-                            )
-                        }
-                        items(forecast) { day ->
-                            DayForecastRow(
-                                day = day,
-                                isToday = forecast.indexOf(day) == 0,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 2.dp)
-                            )
-                        }
-                    }
-
-                    // Attribution
+                // Current conditions hero card
+                uiState.currentWeather?.let { weather ->
                     item {
-                        Text(
-                            text = "Data from Bureau of Meteorology (BOM) Australia",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.outline,
-                            textAlign = TextAlign.Center,
+                        CurrentWeatherHero(
+                            weather = weather,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(16.dp)
+                                .padding(horizontal = 16.dp, vertical = 8.dp)
                         )
                     }
+
+                    // Current detail stats
+                    item {
+                        WeatherDetailsGrid(
+                            weather = weather,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 4.dp)
+                        )
+                    }
+                }
+
+                // 7-day forecast — only this section slides when the city changes
+                item {
+                    AnimatedContent(
+                        targetState = uiState.forecast,
+                        transitionSpec = {
+                            (slideInHorizontally(tween(350)) { slideDirection * it } + fadeIn(tween(350)))
+                                .togetherWith(
+                                    slideOutHorizontally(tween(280)) { -slideDirection * it } + fadeOut(tween(200))
+                                )
+                        },
+                        label = "forecastSlide"
+                    ) { forecast ->
+                        if (forecast.isNotEmpty()) {
+                            Column {
+                                Text(
+                                    text = "7-Day Forecast",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(
+                                        start = 16.dp, end = 16.dp,
+                                        top = 16.dp, bottom = 4.dp
+                                    )
+                                )
+                                forecast.forEachIndexed { index, day ->
+                                    DayForecastRow(
+                                        day = day,
+                                        isToday = index == 0,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 16.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Attribution
+                item {
+                    Text(
+                        text = "Data from Bureau of Meteorology (BOM) Australia",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.outline,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                    )
                 }
             }
 
