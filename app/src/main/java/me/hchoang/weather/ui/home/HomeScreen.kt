@@ -172,6 +172,7 @@ fun HomeScreen(
                                     DayForecastRow(
                                         day = day,
                                         isToday = index == 0,
+                                        currentTemp = if (index == 0) uiState.currentWeather?.temp else null,
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .padding(horizontal = 16.dp, vertical = 2.dp)
@@ -347,6 +348,7 @@ private fun StatItem(icon: String, label: String, value: String) {
 fun DayForecastRow(
     day: DayForecastUi,
     isToday: Boolean,
+    currentTemp: Double? = null,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -408,25 +410,33 @@ fun DayForecastRow(
             Spacer(Modifier.width(8.dp))
 
             // Temps
-            Row {
-                day.tempMin?.let {
-                    Text(
-                        text = "${it}°",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.outline
-                    )
-                }
+            if (isToday && currentTemp != null) {
                 Text(
-                    text = "  /  ",
+                    text = "${currentTemp.toInt()}°C",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.outline
+                    fontWeight = FontWeight.SemiBold
                 )
-                day.tempMax?.let {
-                    Text(
-                        text = "${it}°",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
+            } else {
+                Row {
+                    day.tempMin?.let {
+                        Text(
+                            text = "${it}°",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.outline
+                        )
+                        Text(
+                            text = "  /  ",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.outline
+                        )
+                    }
+                    day.tempMax?.let {
+                        Text(
+                            text = "${it}°",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
                 }
             }
         }
