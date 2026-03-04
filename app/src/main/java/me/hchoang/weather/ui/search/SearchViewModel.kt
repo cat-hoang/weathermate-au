@@ -1,11 +1,13 @@
 package me.hchoang.weather.ui.search
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import me.hchoang.weather.data.api.RetrofitClient
+import me.hchoang.weather.data.db.WeatherDatabase
 import me.hchoang.weather.data.repository.WeatherRepository
 import me.hchoang.weather.ui.model.LocationUi
 import me.hchoang.weather.ui.util.toUi
@@ -18,9 +20,12 @@ data class SearchUiState(
 )
 
 @OptIn(FlowPreview::class)
-class SearchViewModel : ViewModel() {
+class SearchViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val repository = WeatherRepository(RetrofitClient.bomApiService)
+    private val repository = WeatherRepository(
+        api = RetrofitClient.bomApiService,
+        cache = WeatherDatabase.getInstance(application).weatherCacheDao()
+    )
 
     private val _uiState = MutableStateFlow(SearchUiState())
     val uiState: StateFlow<SearchUiState> = _uiState.asStateFlow()

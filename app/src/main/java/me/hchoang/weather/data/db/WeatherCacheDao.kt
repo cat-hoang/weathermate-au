@@ -1,0 +1,26 @@
+package me.hchoang.weather.data.db
+
+import androidx.room.Dao
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
+import androidx.room.Query
+
+@Dao
+interface WeatherCacheDao {
+
+    // ── Observations ────────────────────────────────────────────────────────
+
+    @Query("SELECT * FROM observation_cache WHERE geohash = :geohash")
+    suspend fun getObservation(geohash: String): ObservationCacheEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertObservation(entity: ObservationCacheEntity)
+
+    // ── Forecasts ────────────────────────────────────────────────────────────
+
+    @Query("SELECT * FROM forecast_cache WHERE geohash = :geohash")
+    suspend fun getForecast(geohash: String): ForecastCacheEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertForecast(entity: ForecastCacheEntity)
+}

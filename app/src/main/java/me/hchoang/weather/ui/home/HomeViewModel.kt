@@ -1,13 +1,16 @@
 package me.hchoang.weather.ui.home
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import me.hchoang.weather.data.api.RetrofitClient
+import me.hchoang.weather.data.db.WeatherDatabase
 import me.hchoang.weather.data.repository.WeatherRepository
 import me.hchoang.weather.ui.model.CurrentWeatherUi
 import me.hchoang.weather.ui.model.DayForecastUi
@@ -23,9 +26,12 @@ data class HomeUiState(
     val error: String? = null
 )
 
-class HomeViewModel : ViewModel() {
+class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val repository = WeatherRepository(RetrofitClient.bomApiService)
+    private val repository = WeatherRepository(
+        api = RetrofitClient.bomApiService,
+        cache = WeatherDatabase.getInstance(application).weatherCacheDao()
+    )
 
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
@@ -33,71 +39,76 @@ class HomeViewModel : ViewModel() {
     val popularCities: List<PopularCity> = POPULAR_AU_CITIES
 
     init {
-        loadWeather(POPULAR_AU_CITIES.first())
+        prefetchAllCities()
     }
 
+    /**
+     * On first launch: fetch weather for every popular city in parallel and persist
+     * all results to SQLite. Then display the first city from cache.
+     */
+    private fun prefetchAllCities() {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+
+            // Fetch all cities concurrently
+            POPULAR_AU_CITIES
+                .map { city -> async { repository.fetchAndCache(city.geohash) } }
+                .awaitAll()
+
+            // Render the default city from cache
+            displayFromCache(POPULAR_AU_CITIES.first())
+        }
+    }
+
+    /**
+     * Called when the user taps a city chip. Reads from the local cache — no network call.
+     * If the cache is somehow empty (first launch failed), falls back to a live fetch.
+     */
     fun loadWeather(city: PopularCity) {
         viewModelScope.launch {
-            // Snapshot what was displayed so we can restore it on failure.
-            val previousCity = _uiState.value.selectedCity
-            val previousWeather = _uiState.value.currentWeather
-            val previousForecast = _uiState.value.forecast
-
             _uiState.value = _uiState.value.copy(
                 isLoading = true,
                 selectedCity = city,
                 error = null
             )
-
-            val observationsDeferred = async { repository.getObservations(city.geohash) }
-            val forecastDeferred = async { repository.getDailyForecast(city.geohash) }
-
-            val observationsResult = observationsDeferred.await()
-            val forecastResult = forecastDeferred.await()
-
-            if (observationsResult.isFailure && forecastResult.isFailure) {
-                // Revert to the previous city + data so the UI stays consistent.
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    selectedCity = previousCity ?: city,
-                    currentWeather = previousWeather,
-                    forecast = previousForecast,
-                    error = "Unable to load weather for ${city.name}. Please check your connection."
-                )
-                return@launch
-            }
-
-            val forecastList = forecastResult.getOrNull()?.data
-                ?.map { it.toUi() }
-                ?: emptyList()
-
-            val todayIcon = forecastList.firstOrNull()?.iconDescriptor ?: "unknown"
-
-            val currentWeather = observationsResult.getOrNull()
-                ?.toUi(locationName = city.name, iconDescriptor = todayIcon)
-
-            // If the new city yielded no data at all, restore previous city/data and report as error.
-            if (currentWeather == null && forecastList.isEmpty()) {
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    selectedCity = previousCity ?: city,
-                    currentWeather = previousWeather,
-                    forecast = previousForecast,
-                    error = "No weather data available for ${city.name}."
-                )
-                return@launch
-            }
-
-            _uiState.value = _uiState.value.copy(
-                isLoading = false,
-                currentWeather = currentWeather,
-                forecast = forecastList,
-                error = null
-            )
+            displayFromCache(city)
         }
     }
 
-    fun onCitySelected(city: PopularCity) {
-        loadWeather(city)
+    fun onCitySelected(city: PopularCity) = loadWeather(city)
+
+    // ── Private helpers ───────────────────────────────────────────────────────
+
+    private suspend fun displayFromCache(city: PopularCity) {
+        val obsDto = repository.getCachedObservation(city.geohash)
+        val forecastDto = repository.getCachedForecast(city.geohash)
+
+        val forecastList = forecastDto?.data?.map { it.toUi() } ?: emptyList()
+        val todayIcon = forecastList.firstOrNull()?.iconDescriptor ?: "unknown"
+        val currentWeather = obsDto?.toUi(locationName = city.name, iconDescriptor = todayIcon)
+
+        if (currentWeather == null && forecastList.isEmpty()) {
+            // Cache miss — attempt a live fetch as fallback
+            val result = repository.fetchAndCache(city.geohash)
+            if (result.isFailure) {
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    selectedCity = city,
+                    error = "Unable to load weather for ${city.name}. Please check your connection."
+                )
+                return
+            }
+            // Retry from cache after successful fetch
+            displayFromCache(city)
+            return
+        }
+
+        _uiState.value = _uiState.value.copy(
+            isLoading = false,
+            selectedCity = city,
+            currentWeather = currentWeather,
+            forecast = forecastList,
+            error = null
+        )
     }
 }
