@@ -29,6 +29,10 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import me.hchoang.weather.ui.model.CurrentWeatherUi
@@ -45,8 +49,20 @@ fun HomeScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var slideDirection by remember { mutableIntStateOf(1) }
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // Show a non-blocking snackbar whenever there is an error but old data is still visible.
+    LaunchedEffect(uiState.error) {
+        if (uiState.error != null && uiState.currentWeather != null) {
+            snackbarHostState.showSnackbar(
+                message = uiState.error!!,
+                duration = SnackbarDuration.Long
+            )
+        }
+    }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = {
@@ -189,7 +205,7 @@ fun HomeScreen(
                 )
             }
 
-            // Error state — only when no cached data is available yet
+            // Full-screen error — only when there is no cached data to show
             if (uiState.error != null && uiState.currentWeather == null && !uiState.isLoading) {
                 ErrorView(
                     message = uiState.error!!,

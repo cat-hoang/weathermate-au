@@ -38,6 +38,11 @@ class HomeViewModel : ViewModel() {
 
     fun loadWeather(city: PopularCity) {
         viewModelScope.launch {
+            // Snapshot what was displayed so we can restore it on failure.
+            val previousCity = _uiState.value.selectedCity
+            val previousWeather = _uiState.value.currentWeather
+            val previousForecast = _uiState.value.forecast
+
             _uiState.value = _uiState.value.copy(
                 isLoading = true,
                 selectedCity = city,
@@ -51,9 +56,13 @@ class HomeViewModel : ViewModel() {
             val forecastResult = forecastDeferred.await()
 
             if (observationsResult.isFailure && forecastResult.isFailure) {
+                // Revert to the previous city + data so the UI stays consistent.
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    error = "Unable to load weather data. Please check your connection."
+                    selectedCity = previousCity ?: city,
+                    currentWeather = previousWeather,
+                    forecast = previousForecast,
+                    error = "Unable to load weather for ${city.name}. Please check your connection."
                 )
                 return@launch
             }
@@ -67,12 +76,23 @@ class HomeViewModel : ViewModel() {
             val currentWeather = observationsResult.getOrNull()
                 ?.toUi(locationName = city.name, iconDescriptor = todayIcon)
 
+            // If the new city yielded no data at all, restore previous city/data and report as error.
+            if (currentWeather == null && forecastList.isEmpty()) {
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    selectedCity = previousCity ?: city,
+                    currentWeather = previousWeather,
+                    forecast = previousForecast,
+                    error = "No weather data available for ${city.name}."
+                )
+                return@launch
+            }
+
             _uiState.value = _uiState.value.copy(
                 isLoading = false,
                 currentWeather = currentWeather,
                 forecast = forecastList,
-                error = if (currentWeather == null && forecastList.isEmpty())
-                    "No weather data available for ${city.name}." else null
+                error = null
             )
         }
     }

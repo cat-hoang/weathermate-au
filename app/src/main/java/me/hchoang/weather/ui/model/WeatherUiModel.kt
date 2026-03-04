@@ -48,11 +48,4 @@ val POPULAR_AU_CITIES = listOf(
     PopularCity("r1r0fsm", "Sydney", "NSW"),
     PopularCity("r1f9652", "Melbourne", "VIC"),
     PopularCity("r7hgdp4", "Brisbane", "QLD"),
-    PopularCity("d1wgn87", "Adelaide", "SA"),
-    PopularCity("pbmt5ge", "Perth", "WA"),
-    PopularCity("r3gx2f5", "Canberra", "ACT"),
-    PopularCity("r3dp5kz", "Newcastle", "NSW"),
-    PopularCity("r7ey350", "Gold Coast", "QLD"),
-    PopularCity("p0013qe", "Hobart", "TAS"),
-    PopularCity("qd2rxkf", "Darwin", "NT")
 )
