@@ -13,6 +13,9 @@ interface WeatherCacheDao {
     @Query("SELECT * FROM observation_cache WHERE geohash = :geohash")
     suspend fun getObservation(geohash: String): ObservationCacheEntity?
 
+    @Query("SELECT cachedAt FROM observation_cache WHERE geohash = :geohash")
+    suspend fun getObservationCachedAt(geohash: String): Long?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertObservation(entity: ObservationCacheEntity)
 

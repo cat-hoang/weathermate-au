@@ -45,16 +45,23 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     /**
-     * On first launch: fetch weather for every popular city in parallel and persist
-     * all results to SQLite. Then display the first city from cache.
+     * On cold start: for each popular city, fetch from the network only if the local
+     * cache is missing or older than [WeatherRepository.CACHE_TTL_MS]. Cities with
+     * fresh cached data are skipped entirely. Then display the first city from cache.
      */
     private fun prefetchAllCities() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
 
-            // Fetch all cities concurrently
+            // Fetch only cities whose cache is absent or stale
             POPULAR_AU_CITIES
-                .map { city -> async { repository.fetchAndCache(city.geohash) } }
+                .map { city ->
+                    async {
+                        if (!repository.isCacheFresh(city.geohash)) {
+                            repository.fetchAndCache(city.geohash)
+                        }
+                    }
+                }
                 .awaitAll()
 
             // Render the default city from cache

@@ -17,6 +17,19 @@ class WeatherRepository(
 ) {
     private val gson = Gson()
 
+    // ── Cache freshness ───────────────────────────────────────────────────────
+
+    /** Returns true if a cache entry for [geohash] exists and is younger than [CACHE_TTL_MS]. */
+    suspend fun isCacheFresh(geohash: String): Boolean {
+        val cachedAt = cache.getObservationCachedAt(geohash) ?: return false
+        return System.currentTimeMillis() - cachedAt < CACHE_TTL_MS
+    }
+
+    companion object {
+        /** Cache entries older than 30 minutes are considered stale. */
+        const val CACHE_TTL_MS = 30 * 60 * 1000L
+    }
+
     // ── Location search (no caching needed) ─────────────────────────────────
 
     suspend fun searchLocations(query: String): Result<LocationSearchResponseDto> =
