@@ -18,3 +18,11 @@ data class ForecastCacheEntity(
     val dataJson: String,
     val cachedAt: Long = System.currentTimeMillis()
 )
+
+@Entity(tableName = "hourly_forecast_cache")
+data class HourlyForecastCacheEntity(
+    @PrimaryKey val geohash: String,
+    /** JSON-serialised HourlyForecastResponseDto */
+    val dataJson: String,
+    val cachedAt: Long = System.currentTimeMillis()
+)

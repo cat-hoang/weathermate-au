@@ -14,6 +14,7 @@ import me.hchoang.weather.data.db.WeatherDatabase
 import me.hchoang.weather.data.repository.WeatherRepository
 import me.hchoang.weather.ui.model.CurrentWeatherUi
 import me.hchoang.weather.ui.model.DayForecastUi
+import me.hchoang.weather.ui.model.HourlyForecastUi
 import me.hchoang.weather.ui.model.POPULAR_AU_CITIES
 import me.hchoang.weather.ui.model.PopularCity
 import me.hchoang.weather.ui.util.toUi
@@ -22,6 +23,7 @@ data class HomeUiState(
     val isLoading: Boolean = false,
     val selectedCity: PopularCity? = null,
     val currentWeather: CurrentWeatherUi? = null,
+    val hourlyForecast: List<HourlyForecastUi> = emptyList(),
     val forecast: List<DayForecastUi> = emptyList(),
     val error: String? = null
 )
@@ -82,10 +84,17 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     private suspend fun displayFromCache(city: PopularCity) {
         val obsDto = repository.getCachedObservation(city.geohash)
         val forecastDto = repository.getCachedForecast(city.geohash)
+        val hourlyDto = repository.getCachedHourlyForecast(city.geohash)
 
         val forecastList = forecastDto?.data?.map { it.toUi() } ?: emptyList()
         val todayIcon = forecastList.firstOrNull()?.iconDescriptor ?: "unknown"
         val currentWeather = obsDto?.toUi(locationName = city.name, iconDescriptor = todayIcon)
+
+        // Filter hourly forecast to next 24 h only
+        val hourlyList = hourlyDto?.data
+            ?.take(24)
+            ?.map { it.toUi() }
+            ?: emptyList()
 
         if (currentWeather == null && forecastList.isEmpty()) {
             // Cache miss — attempt a live fetch as fallback
@@ -107,6 +116,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             isLoading = false,
             selectedCity = city,
             currentWeather = currentWeather,
+            hourlyForecast = hourlyList,
             forecast = forecastList,
             error = null
         )

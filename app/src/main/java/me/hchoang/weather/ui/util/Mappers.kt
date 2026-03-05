@@ -3,6 +3,7 @@ package me.hchoang.weather.ui.util
 import me.hchoang.weather.data.dto.*
 import me.hchoang.weather.ui.model.CurrentWeatherUi
 import me.hchoang.weather.ui.model.DayForecastUi
+import me.hchoang.weather.ui.model.HourlyForecastUi
 import me.hchoang.weather.ui.model.LocationUi
 import java.time.OffsetDateTime
 import java.time.ZoneId
@@ -71,6 +72,18 @@ private fun String.formatIsoToLocal(): String = parseIsoDate()
 
 private fun String.formatIsoToLocalTime(): String = parseIsoDate()
     ?.format(DateTimeFormatter.ofPattern("h:mm a", Locale.ENGLISH)) ?: this
+
+fun HourlyForecastDto.toUi(): HourlyForecastUi {
+    val parsedTime = time?.parseIsoDate()
+    val formattedTime = parsedTime?.format(DateTimeFormatter.ofPattern("h a", Locale.ENGLISH)) ?: time ?: ""
+    return HourlyForecastUi(
+        time = formattedTime,
+        temp = temp?.toInt() ?: 0,
+        iconDescriptor = iconDescriptor ?: "unknown",
+        rainChance = rain?.chance ?: 0,
+        isNight = isNight ?: false
+    )
+}
 
 /** Map BOM icon_descriptor to a weather condition label + emoji for display */
 fun weatherIcon(descriptor: String): String = when (descriptor.lowercase()) {

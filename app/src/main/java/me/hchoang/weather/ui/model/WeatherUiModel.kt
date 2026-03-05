@@ -37,6 +37,14 @@ data class DayForecastUi(
     val sunsetTime: String
 )
 
+data class HourlyForecastUi(
+    val time: String,
+    val temp: Int,
+    val iconDescriptor: String,
+    val rainChance: Int,
+    val isNight: Boolean
+)
+
 // Pre-defined major Australian cities for quick access
 data class PopularCity(
     val geohash: String,

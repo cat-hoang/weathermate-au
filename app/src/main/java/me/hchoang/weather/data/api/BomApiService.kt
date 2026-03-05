@@ -1,6 +1,7 @@
 package me.hchoang.weather.data.api
 
 import me.hchoang.weather.data.dto.ForecastResponseDto
+import me.hchoang.weather.data.dto.HourlyForecastResponseDto
 import me.hchoang.weather.data.dto.LocationSearchResponseDto
 import me.hchoang.weather.data.dto.ObservationResponseDto
 import retrofit2.http.GET
@@ -23,4 +24,9 @@ interface BomApiService {
     suspend fun getDailyForecast(
         @Path("geohash") geohash: String
     ): ForecastResponseDto
+
+    @GET("v1/locations/{geohash}/forecasts/hourly")
+    suspend fun getHourlyForecast(
+        @Path("geohash") geohash: String
+    ): HourlyForecastResponseDto
 }

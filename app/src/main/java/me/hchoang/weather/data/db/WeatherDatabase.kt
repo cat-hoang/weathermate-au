@@ -6,8 +6,8 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 
 @Database(
-    entities = [ObservationCacheEntity::class, ForecastCacheEntity::class],
-    version = 1,
+    entities = [ObservationCacheEntity::class, ForecastCacheEntity::class, HourlyForecastCacheEntity::class],
+    version = 2,
     exportSchema = false
 )
 abstract class WeatherDatabase : RoomDatabase() {
@@ -24,7 +24,7 @@ abstract class WeatherDatabase : RoomDatabase() {
                     context.applicationContext,
                     WeatherDatabase::class.java,
                     "weather_cache.db"
-                ).build().also { INSTANCE = it }
+                ).fallbackToDestructiveMigration(dropAllTables = true).build().also { INSTANCE = it }
             }
     }
 }

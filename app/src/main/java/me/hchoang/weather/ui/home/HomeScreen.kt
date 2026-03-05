@@ -37,6 +37,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import me.hchoang.weather.ui.model.CurrentWeatherUi
 import me.hchoang.weather.ui.model.DayForecastUi
+import me.hchoang.weather.ui.model.HourlyForecastUi
 import me.hchoang.weather.ui.model.PopularCity
 import me.hchoang.weather.ui.util.weatherIcon
 
@@ -148,7 +149,7 @@ fun HomeScreen(
                 // 7-day forecast — only this section slides when the city changes
                 item {
                     AnimatedContent(
-                        targetState = uiState.forecast,
+                        targetState = uiState.forecast to uiState.hourlyForecast,
                         transitionSpec = {
                             (slideInHorizontally(tween(350)) { slideDirection * it } + fadeIn(tween(350)))
                                 .togetherWith(
@@ -156,9 +157,15 @@ fun HomeScreen(
                                 )
                         },
                         label = "forecastSlide"
-                    ) { forecast ->
-                        if (forecast.isNotEmpty()) {
-                            Column {
+                    ) { (forecast, hourly) ->
+                        Column {
+                            if (hourly.isNotEmpty()) {
+                                HourlyForecastSection(
+                                    hourly = hourly,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
+                            if (forecast.isNotEmpty()) {
                                 Text(
                                     text = "7-Day Forecast",
                                     style = MaterialTheme.typography.titleSmall,
@@ -345,6 +352,78 @@ private fun StatItem(icon: String, label: String, value: String) {
 }
 
 @Composable
+private fun HourlyForecastSection(
+    hourly: List<HourlyForecastUi>,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier) {
+        Text(
+            text = "Hourly Forecast",
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 4.dp)
+        )
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(hourly) { hour ->
+                HourlyForecastCard(hour = hour)
+            }
+        }
+    }
+}
+
+@Composable
+private fun HourlyForecastCard(
+    hour: HourlyForecastUi,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.width(72.dp),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 12.dp, horizontal = 8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                text = hour.time,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.outline,
+                textAlign = TextAlign.Center
+            )
+            Text(
+                text = weatherIcon(hour.iconDescriptor),
+                fontSize = 22.sp,
+                textAlign = TextAlign.Center
+            )
+            Text(
+                text = "${hour.temp}°",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center
+            )
+            if (hour.rainChance > 0) {
+                Text(
+                    text = "💧${hour.rainChance}%",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    textAlign = TextAlign.Center
+                )
+            }
+        }
+    }
+}
+
+@Composable
 fun DayForecastRow(
     day: DayForecastUi,
     isToday: Boolean,
@@ -515,6 +594,26 @@ private val sampleForecastTomorrow = DayForecastUi(
     sunriseTime = "6:35 am",
     sunsetTime = "7:39 pm"
 )
+
+private val sampleHourly = listOf(
+    HourlyForecastUi(time = "3 pm", temp = 26, iconDescriptor = "partly_cloudy", rainChance = 10, isNight = false),
+    HourlyForecastUi(time = "4 pm", temp = 27, iconDescriptor = "sunny", rainChance = 0, isNight = false),
+    HourlyForecastUi(time = "5 pm", temp = 25, iconDescriptor = "partly_cloudy", rainChance = 20, isNight = false),
+    HourlyForecastUi(time = "6 pm", temp = 23, iconDescriptor = "cloudy", rainChance = 30, isNight = false),
+    HourlyForecastUi(time = "7 pm", temp = 21, iconDescriptor = "shower", rainChance = 60, isNight = true),
+    HourlyForecastUi(time = "8 pm", temp = 20, iconDescriptor = "rain", rainChance = 80, isNight = true),
+)
+
+@Preview(showBackground = true, name = "Hourly Forecast Section")
+@Composable
+private fun PreviewHourlyForecastSection() {
+    me.hchoang.weather.ui.theme.WeatherTheme {
+        HourlyForecastSection(
+            hourly = sampleHourly,
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
+}
 
 @Preview(showBackground = true, name = "Current Weather Hero")
 @Composable

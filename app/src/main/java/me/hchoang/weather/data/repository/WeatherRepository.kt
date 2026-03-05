@@ -3,9 +3,11 @@ package me.hchoang.weather.data.repository
 import com.google.gson.Gson
 import me.hchoang.weather.data.api.BomApiService
 import me.hchoang.weather.data.db.ForecastCacheEntity
+import me.hchoang.weather.data.db.HourlyForecastCacheEntity
 import me.hchoang.weather.data.db.ObservationCacheEntity
 import me.hchoang.weather.data.db.WeatherCacheDao
 import me.hchoang.weather.data.dto.ForecastResponseDto
+import me.hchoang.weather.data.dto.HourlyForecastResponseDto
 import me.hchoang.weather.data.dto.LocationSearchResponseDto
 import me.hchoang.weather.data.dto.ObservationResponseDto
 
@@ -32,6 +34,11 @@ class WeatherRepository(
             gson.fromJson(it.dataJson, ForecastResponseDto::class.java)
         }
 
+    suspend fun getCachedHourlyForecast(geohash: String): HourlyForecastResponseDto? =
+        cache.getHourlyForecast(geohash)?.let {
+            gson.fromJson(it.dataJson, HourlyForecastResponseDto::class.java)
+        }
+
     // ── Network fetch + cache write ──────────────────────────────────────────
 
     /**
@@ -42,6 +49,8 @@ class WeatherRepository(
     suspend fun fetchAndCache(geohash: String): Result<Unit> {
         val obsResult = runCatching { api.getObservations(geohash) }
         val forecastResult = runCatching { api.getDailyForecast(geohash) }
+        // Hourly endpoint requires a 6-character geohash
+        val hourlyResult = runCatching { api.getHourlyForecast(geohash.take(6)) }
 
         obsResult.getOrNull()?.let { dto ->
             cache.insertObservation(
@@ -52,6 +61,12 @@ class WeatherRepository(
         forecastResult.getOrNull()?.let { dto ->
             cache.insertForecast(
                 ForecastCacheEntity(geohash = geohash, dataJson = gson.toJson(dto))
+            )
+        }
+
+        hourlyResult.getOrNull()?.let { dto ->
+            cache.insertHourlyForecast(
+                HourlyForecastCacheEntity(geohash = geohash, dataJson = gson.toJson(dto))
             )
         }
 

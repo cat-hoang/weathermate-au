@@ -23,4 +23,12 @@ interface WeatherCacheDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertForecast(entity: ForecastCacheEntity)
+
+    // ── Hourly forecasts ──────────────────────────────────────────────────────
+
+    @Query("SELECT * FROM hourly_forecast_cache WHERE geohash = :geohash")
+    suspend fun getHourlyForecast(geohash: String): HourlyForecastCacheEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertHourlyForecast(entity: HourlyForecastCacheEntity)
 }
